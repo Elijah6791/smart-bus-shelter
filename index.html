@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fairfield Smart Bus Shelter - Interactive Command & Analytics Hub</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              400: '#38bdf8',
+              500: '#0284c7',
+              600: '#0369a1',
+              800: '#075985',
+              900: '#0c4a6e',
+              950: '#082f49',
+            },
+            accent: {
+              green: '#10b981',
+              amber: '#f59e0b',
+              cyan: '#06b6d4',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Google Fonts & Font Awesome Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Chart.js for responsive energy analytics & ROI charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0b132b;
+      color: #f1f5f9;
+    }
+    
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Custom Glassmorphism Cards */
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(56, 189, 248, 0.15);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+    
+    .glass-card-hover {
+      transition: all 0.25s ease-in-out;
+    }
+    .glass-card-hover:hover {
+      border-color: rgba(56, 189, 248, 0.4);
+      transform: translateY(-2px);
+    }
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b132b;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #0284c7;
+    }
+
+    /* E-Ink Transit Screen Simulation Effect */
+    .eink-display {
+      background-color: #e2e8f0;
+      color: #0f172a;
+      font-family: 'JetBrains Mono', monospace;
+      border: 4px solid #334155;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    /* Range slider styling */
+    input[type=range] {
+      accent-color: #38bdf8;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white">
+
+  <!-- ================= HEADER NAVBAR ================= -->
+  <header class="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-md border-b border-slate-800 px-4 lg:px-8 py-3">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Brand & Project Title -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-accent-cyan flex items-center justify-center text-white shadow-lg shadow-brand-500/20">
+          <i class="fa-solid fa-bus text-xl"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-lg font-bold text-white tracking-wide">FAIRFIELD SMART BUS SHELTER</h1>
+            <span class="px-2 py-0.5 text-xs font-semibold bg-brand-900/80 text-brand-400 border border-brand-500/30 rounded-full">NSW Network</span>
+          </div>
+          <p class="text-xs text-slate-400">Solar & Wind-Powered Suburban Micro-Grid Prototype</p>
+        </div>
+      </div>
+
+      <!-- Live Status Pill & Quick Nav -->
+      <div class="flex items-center space-x-4">
+        <div class="hidden sm:flex items-center space-x-2 bg-slate-900/90 border border-slate-700/60 px-3 py-1.5 rounded-lg text-xs">
+          <span class="relative flex h-2.5 w-2.5">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+          </span>
+          <span class="text-slate-300 font-medium">System Telemetry Online</span>
+          <span class="text-slate-500">|</span>
+          <span class="text-brand-400 font-mono" id="live-clock">12:00:00 PM</span>
+        </div>
+
+        <!-- Quick Weather Presets -->
+        <div class="hidden xl:flex items-center space-x-1.5 bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-[11px]">
+          <span class="text-slate-400 px-2 font-semibold uppercase text-[10px] tracking-wider">Presets:</span>
+          <button onclick="applyPreset('summer')" class="px-2 py-1 rounded bg-slate-800 hover:bg-amber-500/20 text-amber-300 transition-all">
+            <i class="fa-solid fa-sun mr-1"></i>Peak Sun
+          </button>
+          <button onclick="applyPreset('overcast')" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all">
+            <i class="fa-solid fa-cloud mr-1"></i>Overcast
+          </button>
+          <button onclick="applyPreset('storm')" class="px-2 py-1 rounded bg-slate-800 hover:bg-cyan-500/20 text-cyan-300 transition-all">
+            <i class="fa-solid fa-wind mr-1"></i>Storm
+          </button>
+          <button onclick="applyPreset('rush')" class="px-2 py-1 rounded bg-slate-800 hover:bg-emerald-500/20 text-emerald-300 transition-all">
+            <i class="fa-solid fa-users mr-1"></i>Rush Hour
+          </button>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="flex items-center bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-xs font-medium">
+          <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="px-3 py-1.5 rounded-lg text-white bg-brand-600 transition-all flex items-center gap-1.5">
+            <i class="fa-solid fa-chart-line"></i> <span>Dashboard</span>
+          </button>
+          <button onclick="switchTab('inspector')" id="tab-btn-inspector" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition-all flex items-center gap-1.5">
+            <i class="fa-solid fa-microchip"></i> <span>Hardware Inspector</span>
+          </button>
+          <button onclick="switchTab('roi')" id="tab-btn-roi" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition-all flex items-center gap-1.5">
+            <i class="fa-solid fa-calculator"></i> <span>ROI & Budget</span>
+          </button>
+          <button onclick="switchTab('network')" id="tab-btn-network" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition-all flex items-center gap-1.5">
+            <i class="fa-solid fa-network-wired"></i> <span>Network Deployment</span>
+          </button>
+        </nav>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTAINER ================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8 space-y-6">
+
+    <!-- TAB 1: SYSTEM DASHBOARD & SIMULATOR -->
+    <div id="view-dashboard" class="space-y-6">
+      
+      <!-- Top Grid: Live Physics Controls & System Telemetry -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left 4 Cols: Environmental Physics Controls -->
+        <div class="lg:col-span-4 glass-panel rounded-2xl p-5 space-y-5 border border-slate-800">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h2 class="font-semibold text-slate-100 flex items-center gap-2">
+              <i class="fa-solid fa-sliders text-brand-400"></i> Environmental Physics Simulator
+            </h2>
+            <button onclick="resetEnvironment()" class="text-xs text-slate-400 hover:text-brand-400 transition-colors">
+              <i class="fa-solid fa-rotate-left"></i> Reset
+            </button>
+          </div>
+
+          <!-- Sun Intensity Slider -->
+          <div class="space-y-2">
+            <div class="flex justify-between text-xs">
+              <span class="text-slate-300 font-medium"><i class="fa-solid fa-sun text-amber-400 mr-1.5"></i>Solar Irradiance / Sun Intensity</span>
+              <span class="font-mono text-amber-400" id="val-sun">85%</span>
+            </div>
+            <input type="range" id="slider-sun" min="0" max="100" value="85" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+            <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+              <span>Night (0 W/m²)</span>
+              <span>Overcast</span>
+              <span>Peak Sun (1000 W/m²)</span>
+            </div>
+          </div>
+
+          <!-- Wind Speed Slider -->
+          <div class="space-y-2">
+            <div class="flex justify-between text-xs">
+              <span class="text-slate-300 font-medium"><i class="fa-solid fa-wind text-cyan-400 mr-1.5"></i>Wind Speed (Vertical Turbine)</span>
+              <span class="font-mono text-cyan-400" id="val-wind">18 km/h</span>
+            </div>
+            <input type="range" id="slider-wind" min="0" max="50" value="18" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+            <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+              <span>Calm (0 km/h)</span>
+              <span>Optimal Cut-in</span>
+              <span>Strong Gusts (50 km/h)</span>
+            </div>
+          </div>
+
+          <!-- Commuter Passenger Load Toggle -->
+          <div class="space-y-2">
+            <div class="flex justify-between text-xs">
+              <span class="text-slate-300 font-medium"><i class="fa-solid fa-users text-emerald-400 mr-1.5"></i>Shelter Commuter Occupancy</span>
+              <span class="font-mono text-emerald-400" id="val-passengers">4 Passengers</span>
+            </div>
+            <input type="range" id="slider-passengers" min="0" max="12" value="4" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+          </div>
+
+          <!-- Interactive Power Grid Toggles -->
+          <div class="pt-2 border-t border-slate-800/80 space-y-3">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Shelter Load Toggles</span>
+            
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <label class="flex items-center justify-between p-2 rounded-lg bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-slate-700">
+                <span class="text-slate-300"><i class="fa-solid fa-lightbulb text-amber-300 mr-1.5"></i>LED Lighting</span>
+                <input type="checkbox" id="toggle-led" checked class="rounded border-slate-700 bg-slate-800 text-brand-500 focus:ring-brand-500">
+              </label>
+
+              <label class="flex items-center justify-between p-2 rounded-lg bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-slate-700">
+                <span class="text-slate-300"><i class="fa-solid fa-temperature-arrow-up text-red-400 mr-1.5"></i>Heated Bench</span>
+                <input type="checkbox" id="toggle-heat" class="rounded border-slate-700 bg-slate-800 text-brand-500 focus:ring-brand-500">
+              </label>
+
+              <label class="flex items-center justify-between p-2 rounded-lg bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-slate-700">
+                <span class="text-slate-300"><i class="fa-solid fa-video text-blue-400 mr-1.5"></i>24/7 CCTV</span>
+                <input type="checkbox" id="toggle-cctv" checked class="rounded border-slate-700 bg-slate-800 text-brand-500 focus:ring-brand-500">
+              </label>
+
+              <label class="flex items-center justify-between p-2 rounded-lg bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-slate-700">
+                <span class="text-slate-300"><i class="fa-solid fa-tv text-purple-400 mr-1.5"></i>Ad Display</span>
+                <input type="checkbox" id="toggle-ad" checked class="rounded border-slate-700 bg-slate-800 text-brand-500 focus:ring-brand-500">
+              </label>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right 8 Cols: Real-Time Telemetry Gauges & Specs -->
+        <div class="lg:col-span-8 space-y-6">
+          
+          <!-- 4 Enhanced Telemetry Cards -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            
+            <!-- Solar Generation -->
+            <div class="glass-panel glass-card-hover rounded-2xl p-4 border-l-4 border-l-amber-400 relative overflow-hidden">
+              <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+                <span>Rooftop Solar Array</span>
+                <i class="fa-solid fa-solar-panel text-amber-400"></i>
+              </div>
+              <div class="text-2xl font-bold font-mono text-white" id="out-solar">340 W</div>
+              <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                <div id="bar-solar" class="bg-gradient-to-r from-amber-500 to-amber-300 h-full transition-all duration-300" style="width: 85%;"></div>
+              </div>
+              <div class="text-[11px] text-slate-400 mt-1 flex justify-between">
+                <span>Cap: 400W Array</span>
+                <span class="text-amber-400 font-semibold" id="pct-solar">85%</span>
+              </div>
+            </div>
+
+            <!-- Wind Turbine Generation -->
+            <div class="glass-panel glass-card-hover rounded-2xl p-4 border-l-4 border-l-cyan-400 relative overflow-hidden">
+              <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+                <span>Vertical Wind Turbine</span>
+                <i class="fa-solid fa-wind text-cyan-400 animate-spin" style="animation-duration: 4s;"></i>
+              </div>
+              <div class="text-2xl font-bold font-mono text-white" id="out-wind">48 W</div>
+              <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                <div id="bar-wind" class="bg-gradient-to-r from-cyan-500 to-cyan-300 h-full transition-all duration-300" style="width: 60%;"></div>
+              </div>
+              <div class="text-[11px] text-slate-400 mt-1 flex justify-between">
+                <span>Cap: 80W Axis</span>
+                <span class="text-cyan-400 font-semibold" id="pct-wind">60%</span>
+              </div>
+            </div>
+
+            <!-- Battery Storage -->
+            <div class="glass-panel glass-card-hover rounded-2xl p-4 border-l-4 border-l-emerald-400 relative overflow-hidden">
+              <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+                <span>LiFePO4 Storage</span>
+                <i class="fa-solid fa-battery-three-quarters text-emerald-400"></i>
+              </div>
+              <div class="text-2xl font-bold font-mono text-white" id="out-battery">92%</div>
+              <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                <div id="bar-battery" class="bg-gradient-to-r from-emerald-500 to-emerald-300 h-full transition-all duration-300" style="width: 92%;"></div>
+              </div>
+              <div class="text-[11px] text-slate-400 mt-1 flex justify-between">
+                <span>Cap: 2.6 kWh</span>
+                <span class="text-emerald-400 font-semibold" id="status-battery">+180W Net</span>
+              </div>
+            </div>
+
+            <!-- Total Shelter Consumption -->
+            <div class="glass-panel glass-card-hover rounded-2xl p-4 border-l-4 border-l-brand-400 relative overflow-hidden">
+              <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+                <span>Current Power Load</span>
+                <i class="fa-solid fa-bolt text-brand-400"></i>
+              </div>
+              <div class="text-2xl font-bold font-mono text-white" id="out-load">208 W</div>
+              <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                <div id="bar-load" class="bg-gradient-to-r from-brand-500 to-brand-300 h-full transition-all duration-300" style="width: 52%;"></div>
+              </div>
+              <div class="text-[11px] text-slate-400 mt-1 flex justify-between">
+                <span>Est. 1.3 kWh/day</span>
+                <span class="text-emerald-400" id="status-grid">Off-Grid Self Powered</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Energy Curve Chart -->
+          <div class="glass-panel rounded-2xl p-5">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="font-semibold text-slate-100 flex items-center gap-2">
+                  <i class="fa-solid fa-chart-area text-brand-400"></i> 24-Hour Energy Balance & Battery Telemetry
+                </h3>
+                <p class="text-xs text-slate-400">Simulated generation curves and battery state-of-charge for Sydney/Fairfield climate</p>
+              </div>
+              <div class="flex items-center space-x-2">
+                <span class="px-2.5 py-1 rounded-full text-xs font-mono bg-emerald-950/80 text-emerald-400 border border-emerald-800" id="co2-offset-badge">
+                  <i class="fa-solid fa-leaf mr-1"></i>~1.8 kg CO₂ Saved/Day
+                </span>
+                <span class="px-2.5 py-1 rounded-full text-xs font-mono bg-brand-950 text-brand-400 border border-brand-800" id="net-daily-badge">
+                  Net Positive: +0.75 kWh/day
+                </span>
+              </div>
+            </div>
+            <div class="h-64 w-full">
+              <canvas id="chart-energy"></canvas>
+            </div>
+          </div>
+
+          <!-- Live Simulated Passenger E-Ink Transit Screen -->
+          <div class="glass-panel rounded-2xl p-5 space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+              <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-wifi text-emerald-400 text-xs animate-pulse"></i>
+                <h3 class="font-bold text-slate-100 text-sm">Live E-Ink Passenger Transit Display (Fairfield Interchange)</h3>
+              </div>
+              <button onclick="toggleEInkMode()" class="text-xs px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700">
+                <i class="fa-solid fa-moon mr-1"></i>Toggle E-Ink Mode
+              </button>
+            </div>
+
+            <!-- E-Ink Display Frame -->
+            <div id="eink-container" class="eink-display p-4 rounded-xl space-y-3 transition-colors duration-300">
+              <div class="flex justify-between items-center text-xs border-b border-slate-400/50 pb-2">
+                <span class="font-bold text-sm tracking-wide">FAIRFIELD BUS INTERCHANGE</span>
+                <span class="font-mono" id="eink-time">12:00 PM</span>
+              </div>
+
+              <!-- Bus Arrival Rows -->
+              <div class="space-y-2 text-xs">
+                <div class="flex justify-between items-center p-2 rounded bg-slate-300/40 border border-slate-400/40">
+                  <div class="flex items-center space-x-3">
+                    <span class="px-2 py-0.5 bg-blue-700 text-white font-bold rounded font-mono">Route 504</span>
+                    <span class="font-semibold">Parramatta Station</span>
+                  </div>
+                  <div class="flex items-center space-x-3">
+                    <span class="text-slate-700"><i class="fa-solid fa-user-group text-[10px] mr-1"></i>Seats Free</span>
+                    <span class="font-bold text-emerald-700 font-mono" id="eta-504">4 mins</span>
+                  </div>
+                </div>
+
+                <div class="flex justify-between items-center p-2 rounded bg-slate-300/40 border border-slate-400/40">
+                  <div class="flex items-center space-x-3">
+                    <span class="px-2 py-0.5 bg-amber-700 text-white font-bold rounded font-mono">Route 808</span>
+                    <span class="font-semibold">Liverpool Interchange</span>
+                  </div>
+                  <div class="flex items-center space-x-3">
+                    <span class="text-slate-700"><i class="fa-solid fa-user-group text-[10px] mr-1"></i>Standing Only</span>
+                    <span class="font-bold text-amber-700 font-mono" id="eta-808">11 mins</span>
+                  </div>
+                </div>
+
+                <div class="flex justify-between items-center p-2 rounded bg-slate-300/40 border border-slate-400/40">
+                  <div class="flex items-center space-x-3">
+                    <span class="px-2 py-0.5 bg-purple-700 text-white font-bold rounded font-mono">Route 817</span>
+                    <span class="font-semibold">Cabramatta Loop</span>
+                  </div>
+                  <div class="flex items-center space-x-3">
+                    <span class="text-slate-700"><i class="fa-solid fa-user-group text-[10px] mr-1"></i>Seats Free</span>
+                    <span class="font-bold text-slate-800 font-mono" id="eta-817">22 mins</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Low Power Banner -->
+              <div class="text-[10px] text-slate-600 flex justify-between items-center pt-1">
+                <span><i class="fa-solid fa-leaf text-emerald-600 mr-1"></i>Solar Micro-Grid Powered (1.8W Draw)</span>
+                <span>Next update in 30s</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: INTERACTIVE HARDWARE COMPONENT INSPECTOR -->
+    <div id="view-inspector" class="hidden space-y-6">
+      <!-- Inspector Header Banner -->
+      <div class="glass-panel rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-microchip text-brand-400"></i> Interactive Hardware Component & Blueprint Inspector
+          </h2>
+          <p class="text-xs text-slate-400">Click any component pin on the architectural blueprint below or select from the grid to inspect technical telemetry.</p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <span class="px-3 py-1 bg-brand-950 text-brand-400 border border-brand-800 rounded-lg text-xs font-mono">
+            <i class="fa-solid fa-ruler-combined mr-1.5"></i>4200mm × 1600mm × 3600mm
+          </span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Left 7 Cols: Architectural Blueprint & Hotspots -->
+        <div class="lg:col-span-7 glass-panel rounded-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 class="font-bold text-slate-100 flex items-center gap-2 text-sm">
+              <i class="fa-solid fa-drafting-table text-brand-400"></i> Bus Shelter Structural Schematic (Side & Front View)
+            </h3>
+            <span class="text-xs text-emerald-400 font-mono flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Diagnostic Ready
+            </span>
+          </div>
+
+          <!-- Component Selector Quick-Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            <button onclick="selectComponent('solar')" class="p-2 rounded-lg bg-slate-900 border border-slate-700 text-xs hover:border-amber-400 text-left transition-all group">
+              <span class="text-[10px] font-mono text-amber-400 font-bold block">1. Solar Panel</span>
+              <span class="text-slate-200">Roof Mount</span>
+            </button>
+            <button onclick="selectComponent('wind')" class="p-2 rounded-lg bg-slate-900 border border-slate-700 text-xs hover:border-cyan-400 text-left transition-all group">
+              <span class="text-[10px] font-mono text-cyan-400 font-bold block">2. Micro-Wind</span>
+              <span class="text-slate-200">Vertical Axis</span>
+            </button>
+            <button onclick="selectComponent('led')" class="p-2 rounded-lg bg-slate-900 border border-slate-700 text-xs hover:border-amber-300 text-left transition-all group">
+              <span class="text-[10px] font-mono text-amber-300 font-bold block">3. LED Lighting</span>
+              <span class="text-slate-200">Inside Roof</span>
+            </button>
+            <button onclick="selectComponent('battery')" class="p-2 rounded-lg bg-slate-900 border border-slate-700 text-xs hover:border-emerald-400 text-left transition-all group">
+              <span class="text-[10px] font-mono text-emerald-400 font-bold block">4. LiFePO4 Battery</span>
+              <span class="text-slate-200">Energy Storage</span>
+            </button>
+            <button onclick="selectComponent('controller')" class="p-2 rounded-lg bg-slate-900 border border-slate-700 text-xs hover:border-brand-400 text-left transition-all group">
+              <span class="text-[10px] font-mono text-brand-400 font-bold block">5. Controller</span>
+              <span class="text-slate-200">Power Mgmt</span>
+            </button>
+            <button onclick="selectComponent('bench')" class="p-2 rounded-lg bg-slate-900 border border-slate-700 text-xs hover:border-red-400 text-left transition-all group">
+              <span class="text-[10px] font-mono text-red-400 font-bold block">6. Heated Seating</span>
+              <span class="text-slate-200">Passenger Comfort</span>
+            </button>
+            <button onclick="selectComponent('eink')" class="p-2 rounded-lg bg-slate-900 border border-slate-700 text-xs hover:border-emerald-300 text-left transition-all group">
+              <span class="text-[10px] font-mono text-emerald-300 font-bold block">7. E-Ink Display</span>
+              <span class="text-slate-200">Electronic Info</span>
+            </button>
+            <button onclick="selectComponent('cctv')" class="p-2 rounded-lg bg-slate-900 border border-slate-700 text-xs hover:border-blue-400 text-left transition-all group">
+              <span class="text-[10px] font-mono text-blue-400 font-bold block">8. Security Camera</span>
+              <span class="text-slate-200">24/7 Monitored</span>
+            </button>
+            <button onclick="selectComponent('ad')" class="p-2 rounded-lg bg-slate-900 border border-slate-700 text-xs hover:border-purple-400 text-left transition-all group">
+              <span class="text-[10px] font-mono text-purple-400 font-bold block">9. Digital Ad</span>
+              <span class="text-slate-200">Revenue Display</span>
+            </button>
+            <button onclick="selectComponent('usb')" class="p-2 rounded-lg bg-slate-900 border border-slate-700 text-xs hover:border-cyan-300 text-left transition-all group">
+              <span class="text-[10px] font-mono text-cyan-300 font-bold block">10. USB Ports</span>
+              <span class="text-slate-200">Commuter Amenity</span>
+            </button>
+          </div>
+
+          <!-- Enhanced Interactive SVG Blueprint Schematic -->
+          <div class="relative w-full h-[320px] bg-slate-950 border border-slate-800 rounded-xl overflow-hidden flex items-center justify-center p-2 shadow-inner">
+            <svg viewBox="0 0 700 350" class="w-full h-full text-slate-400">
+              <defs>
+                <pattern id="grid-insp" width="20" height="20" patternUnits="userSpaceOnUse">
+                  <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" stroke-width="0.75"/>
+                </pattern>
+                <linearGradient id="solarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#d97706"/>
+                  <stop offset="100%" stop-color="#b45309"/>
+                </linearGradient>
+              </defs>
+              <rect width="700" height="350" fill="url(#grid-insp)" />
+
+              <!-- Ground Base -->
+              <line x1="40" y1="300" x2="660" y2="300" stroke="#334155" stroke-width="3" />
+              <rect x="40" y="300" width="620" height="10" fill="#1e293b" opacity="0.5"/>
+
+              <!-- Shelter Structural Frame -->
+              <rect x="180" y="100" width="16" height="200" fill="#334155" stroke="#38bdf8" stroke-width="1.5"/>
+              <rect x="520" y="100" width="16" height="200" fill="#334155" stroke="#38bdf8" stroke-width="1.5"/>
+              <polygon points="140,100 560,100 570,85 130,85" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+
+              <!-- Rooftop Solar Array (1) -->
+              <polygon points="160,85 540,85 530,60 170,60" fill="url(#solarGrad)" stroke="#f59e0b" stroke-width="2" class="cursor-pointer hover:brightness-125 transition-all" onclick="selectComponent('solar')"/>
+
+              <!-- Vertical Wind Turbine (2) -->
+              <line x1="145" y1="85" x2="145" y2="25" stroke="#06b6d4" stroke-width="3"/>
+              <ellipse cx="145" cy="40" rx="20" ry="15" fill="none" stroke="#06b6d4" stroke-width="2" class="animate-spin" style="transform-origin: 145px 40px; animation-duration: 6s;"/>
+
+              <!-- LED Canopy Light (3) -->
+              <line x1="200" y1="102" x2="510" y2="102" stroke="#fde047" stroke-width="3" class="cursor-pointer" onclick="selectComponent('led')"/>
+
+              <!-- Ground Battery Cabinet (4) -->
+              <rect x="160" y="230" width="50" height="70" rx="4" fill="#065f46" stroke="#10b981" stroke-width="2" class="cursor-pointer hover:opacity-80" onclick="selectComponent('battery')"/>
+
+              <!-- Charge Controller (5) -->
+              <rect x="165" y="240" width="40" height="18" rx="2" fill="#0369a1" stroke="#38bdf8" stroke-width="1.5" class="cursor-pointer hover:opacity-80" onclick="selectComponent('controller')"/>
+
+              <!-- Heated Bench (6) -->
+              <rect x="220" y="240" width="270" height="12" rx="3" fill="#991b1b" stroke="#ef4444" stroke-width="1.5" class="cursor-pointer hover:opacity-80" onclick="selectComponent('bench')"/>
+
+              <!-- E-Ink Display (7) -->
+              <rect x="230" y="130" width="75" height="85" rx="4" fill="#cbd5e1" stroke="#0f172a" stroke-width="2" class="cursor-pointer hover:opacity-80" onclick="selectComponent('eink')"/>
+
+              <!-- Security Camera (8) -->
+              <circle cx="535" cy="105" r="8" fill="#1e3a8a" stroke="#60a5fa" stroke-width="1.5" class="cursor-pointer" onclick="selectComponent('cctv')"/>
+
+              <!-- Digital Ad Display (9) -->
+              <rect x="390" y="120" width="105" height="100" rx="4" fill="#581c87" stroke="#c084fc" stroke-width="2" class="cursor-pointer hover:opacity-80" onclick="selectComponent('ad')"/>
+
+              <!-- USB Ports (10) -->
+              <rect x="320" y="235" width="22" height="15" fill="#155e75" stroke="#22d3ee" stroke-width="1.5" class="cursor-pointer hover:brightness-125" onclick="selectComponent('usb')"/>
+
+              <!-- Hotspot Interactive Pins 1 to 10 -->
+              <g class="cursor-pointer" onclick="selectComponent('solar')">
+                <circle cx="350" cy="50" r="10" fill="#f59e0b" stroke="#fff" stroke-width="1.5"/>
+                <text x="344" y="54" font-size="9" font-weight="bold" fill="#000">1</text>
+              </g>
+              <g class="cursor-pointer" onclick="selectComponent('wind')">
+                <circle cx="145" cy="20" r="10" fill="#06b6d4" stroke="#fff" stroke-width="1.5"/>
+                <text x="142" y="24" font-size="9" font-weight="bold" fill="#000">2</text>
+              </g>
+              <g class="cursor-pointer" onclick="selectComponent('led')">
+                <circle cx="210" cy="102" r="10" fill="#fde047" stroke="#fff" stroke-width="1.5"/>
+                <text x="207" y="106" font-size="9" font-weight="bold" fill="#000">3</text>
+              </g>
+              <g class="cursor-pointer" onclick="selectComponent('battery')">
+                <circle cx="185" cy="220" r="10" fill="#10b981" stroke="#fff" stroke-width="1.5"/>
+                <text x="182" y="224" font-size="9" font-weight="bold" fill="#000">4</text>
+              </g>
+              <g class="cursor-pointer" onclick="selectComponent('controller')">
+                <circle cx="185" cy="275" r="10" fill="#38bdf8" stroke="#fff" stroke-width="1.5"/>
+                <text x="182" y="279" font-size="9" font-weight="bold" fill="#000">5</text>
+              </g>
+              <g class="cursor-pointer" onclick="selectComponent('bench')">
+                <circle cx="355" cy="246" r="10" fill="#ef4444" stroke="#fff" stroke-width="1.5"/>
+                <text x="352" y="250" font-size="9" font-weight="bold" fill="#000">6</text>
+              </g>
+              <g class="cursor-pointer" onclick="selectComponent('eink')">
+                <circle cx="268" cy="120" r="10" fill="#34d399" stroke="#fff" stroke-width="1.5"/>
+                <text x="265" y="124" font-size="9" font-weight="bold" fill="#000">7</text>
+              </g>
+              <g class="cursor-pointer" onclick="selectComponent('cctv')">
+                <circle cx="535" cy="85" r="10" fill="#60a5fa" stroke="#fff" stroke-width="1.5"/>
+                <text x="532" y="89" font-size="9" font-weight="bold" fill="#000">8</text>
+              </g>
+              <g class="cursor-pointer" onclick="selectComponent('ad')">
+                <circle cx="442" cy="110" r="10" fill="#c084fc" stroke="#fff" stroke-width="1.5"/>
+                <text x="439" y="114" font-size="9" font-weight="bold" fill="#000">9</text>
+              </g>
+              <g class="cursor-pointer" onclick="selectComponent('usb')">
+                <circle cx="331" cy="222" r="10" fill="#22d3ee" stroke="#fff" stroke-width="1.5"/>
+                <text x="325" y="226" font-size="9" font-weight="bold" fill="#000">10</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Spec Inspector Panel -->
+        <div class="lg:col-span-5 glass-panel rounded-2xl p-5 space-y-4 flex flex-col justify-between">
+          <div class="space-y-4">
+            <div class="border-b border-slate-800 pb-3 flex justify-between items-start">
+              <div>
+                <span id="spec-category" class="text-[10px] font-bold tracking-wider text-brand-400 uppercase">RENEWABLE GENERATION</span>
+                <h3 id="spec-name" class="text-xl font-bold text-white mt-0.5">Rooftop Solar Panel Array</h3>
+                <p id="spec-subtitle" class="text-xs text-slate-400">400W Monocrystalline PERC System</p>
+              </div>
+              <span id="spec-id" class="px-2.5 py-1 bg-slate-800 text-slate-300 text-xs font-mono rounded-lg border border-slate-700">COMP-01</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div class="p-3 bg-slate-900/90 rounded-xl border border-slate-800">
+                <div class="text-[11px] text-slate-400">Power Rating</div>
+                <div id="spec-power" class="text-base font-semibold text-white font-mono mt-0.5">400W Max Peak</div>
+              </div>
+              <div class="p-3 bg-slate-900/90 rounded-xl border border-slate-800">
+                <div class="text-[11px] text-slate-400">Operating Status</div>
+                <div id="spec-status" class="text-base font-semibold text-emerald-400 font-mono mt-0.5">Generating ~340W</div>
+              </div>
+            </div>
+
+            <div class="space-y-1.5">
+              <h4 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Functional Overview</h4>
+              <p id="spec-desc" class="text-xs text-slate-400 leading-relaxed">
+                High-efficiency monocrystalline solar panels angled for optimal Sydney sun exposure. Captures between 1.5 to 2.0 kWh per day, directly supplying power to shelter loads and charging the 2.6 kWh battery.
+              </p>
+            </div>
+
+            <div class="space-y-1.5">
+              <h4 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">ROI & Value Impact</h4>
+              <p id="spec-roi" class="text-xs text-slate-400 leading-relaxed">
+                Eliminates grid trenching costs ($35,000+ savings per remote stop) and provides 100% zero-emission power.
+              </p>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-slate-800 flex justify-between items-center text-xs">
+            <span class="text-slate-400 font-medium">Estimated CapEx:</span>
+            <span id="spec-cost" class="font-mono text-brand-400 font-bold text-sm">$400 - $1,200 AUD</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: FINANCIAL ROI & BUDGET CALCULATOR -->
+    <div id="view-roi" class="hidden space-y-6">
+      
+      <!-- Top Banner -->
+      <div class="glass-panel rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-calculator text-brand-400"></i> Financial ROI & Granular Component Budget Calculator
+          </h2>
+          <p class="text-xs text-slate-400">Customize line-item hardware costs, adjust advertising revenue, and simulate the exact 10-year cumulative payback timeline.</p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <span id="badge-total-capex" class="px-3 py-1 bg-brand-950 text-brand-400 border border-brand-800 rounded-lg text-xs font-mono font-bold">
+            Total CapEx: $34,745 AUD
+          </span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left 6 Cols: Granular Budget Line-Item Adjusters -->
+        <div class="lg:col-span-6 glass-panel rounded-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <h3 class="font-bold text-slate-100 text-sm flex items-center gap-2">
+              <i class="fa-solid fa-list-check text-brand-400"></i> Project Cost Line-Items (AUD)
+            </h3>
+            <button onclick="resetBudgetDefaults()" class="text-xs text-slate-400 hover:text-brand-400">
+              <i class="fa-solid fa-rotate-left mr-1"></i>Reset Defaults
+            </button>
+          </div>
+
+          <!-- Component Budget Sliders Grid -->
+          <div class="space-y-3 text-xs max-h-[440px] overflow-y-auto pr-2">
+            
+            <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5">
+              <div class="flex justify-between font-medium">
+                <span class="text-slate-200">1. Rooftop Solar Array (400W)</span>
+                <span id="cost-lbl-solar" class="font-mono text-amber-400">$800 AUD</span>
+              </div>
+              <input type="range" id="cost-solar" min="400" max="1200" value="800" step="50" class="w-full h-1.5 bg-slate-800 rounded-lg" oninput="recalcBudget()">
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5">
+              <div class="flex justify-between font-medium">
+                <span class="text-slate-200">2. Vertical Micro-Wind Turbine</span>
+                <span id="cost-lbl-wind" class="font-mono text-cyan-400">$6,250 AUD</span>
+              </div>
+              <input type="range" id="cost-wind" min="3500" max="9000" value="6250" step="250" class="w-full h-1.5 bg-slate-800 rounded-lg" oninput="recalcBudget()">
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5">
+              <div class="flex justify-between font-medium">
+                <span class="text-slate-200">3. LED Lighting (Canopy/Inside)</span>
+                <span id="cost-lbl-led" class="font-mono text-amber-300">$100 AUD</span>
+              </div>
+              <input type="range" id="cost-led" min="50" max="150" value="100" step="10" class="w-full h-1.5 bg-slate-800 rounded-lg" oninput="recalcBudget()">
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5">
+              <div class="flex justify-between font-medium">
+                <span class="text-slate-200">4. LiFePO4 Battery Storage (2.6 kWh)</span>
+                <span id="cost-lbl-batt" class="font-mono text-emerald-400">$3,000 AUD</span>
+              </div>
+              <input type="range" id="cost-batt" min="1500" max="4500" value="3000" step="200" class="w-full h-1.5 bg-slate-800 rounded-lg" oninput="recalcBudget()">
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5">
+              <div class="flex justify-between font-medium">
+                <span class="text-slate-200">5. Charge Controller & Power Mgmt</span>
+                <span id="cost-lbl-ctrl" class="font-mono text-brand-400">$400 AUD</span>
+              </div>
+              <input type="range" id="cost-ctrl" min="200" max="600" value="400" step="50" class="w-full h-1.5 bg-slate-800 rounded-lg" oninput="recalcBudget()">
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5">
+              <div class="flex justify-between font-medium">
+                <span class="text-slate-200">6. Heated Seating for Passengers</span>
+                <span id="cost-lbl-heat" class="font-mono text-red-400">$850 AUD</span>
+              </div>
+              <input type="range" id="cost-heat" min="500" max="1200" value="850" step="50" class="w-full h-1.5 bg-slate-800 rounded-lg" oninput="recalcBudget()">
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5">
+              <div class="flex justify-between font-medium">
+                <span class="text-slate-200">7. E-Ink Electronic Info Display</span>
+                <span id="cost-lbl-eink" class="font-mono text-emerald-300">$2,650 AUD</span>
+              </div>
+              <input type="range" id="cost-eink" min="1800" max="3500" value="2650" step="100" class="w-full h-1.5 bg-slate-800 rounded-lg" oninput="recalcBudget()">
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5">
+              <div class="flex justify-between font-medium">
+                <span class="text-slate-200">8. Security Cameras (24/7)</span>
+                <span id="cost-lbl-cam" class="font-mono text-blue-400">$1,000 AUD</span>
+              </div>
+              <input type="range" id="cost-cam" min="500" max="1500" value="1000" step="100" class="w-full h-1.5 bg-slate-800 rounded-lg" oninput="recalcBudget()">
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5">
+              <div class="flex justify-between font-medium">
+                <span class="text-slate-200">9. Digital Advertising Display</span>
+                <span id="cost-lbl-ad" class="font-mono text-purple-400">$3,750 AUD</span>
+              </div>
+              <input type="range" id="cost-ad" min="2500" max="5000" value="3750" step="250" class="w-full h-1.5 bg-slate-800 rounded-lg" oninput="recalcBudget()">
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5">
+              <div class="flex justify-between font-medium">
+                <span class="text-slate-200">10. Bus Stop Structure & Civil Works</span>
+                <span id="cost-lbl-struct" class="font-mono text-slate-300">$14,750 AUD</span>
+              </div>
+              <input type="range" id="cost-struct" min="11500" max="18000" value="14750" step="250" class="w-full h-1.5 bg-slate-800 rounded-lg" oninput="recalcBudget()">
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Right 6 Cols: Revenue Controls & 10-Year Chart -->
+        <div class="lg:col-span-6 space-y-6">
+          
+          <!-- Revenue Controls Card -->
+          <div class="glass-panel rounded-2xl p-5 space-y-4">
+            <h3 class="font-bold text-slate-100 text-sm border-b border-slate-800 pb-2">Commercial Ad Revenue & Operating OpEx</h3>
+            
+            <div class="space-y-3 text-xs">
+              <div class="space-y-1.5">
+                <div class="flex justify-between">
+                  <span class="text-slate-300 font-medium">Annual Advertising Revenue (Digital Ad Screen)</span>
+                  <span id="val-adrev" class="font-mono text-purple-400 font-bold">$2,500 AUD/yr</span>
+                </div>
+                <input type="range" id="slider-adrev" min="1500" max="3000" value="2500" step="250" class="w-full h-2 bg-slate-800 rounded-lg">
+              </div>
+
+              <div class="space-y-1.5">
+                <div class="flex justify-between">
+                  <span class="text-slate-300 font-medium">Annual Maintenance OpEx (Cleaning & Battery Inspection)</span>
+                  <span class="font-mono text-slate-300">$1,000 AUD/yr</span>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3 pt-2">
+                <div class="p-3 bg-slate-900 rounded-xl border border-slate-800">
+                  <div class="text-[11px] text-slate-400">Net Annual Cash Flow</div>
+                  <div id="out-net-annual" class="text-base font-bold font-mono text-emerald-400 mt-0.5">+$1,500 AUD/yr</div>
+                </div>
+                <div class="p-3 bg-slate-900 rounded-xl border border-slate-800">
+                  <div class="text-[11px] text-slate-400">CapEx Payback Period</div>
+                  <div id="out-payback" class="text-base font-bold font-mono text-brand-400 mt-0.5">22.3 Years</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Chart Card -->
+          <div class="glass-panel rounded-2xl p-5">
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="font-bold text-slate-100 text-sm">10-Year Cumulative Payback Projections</h3>
+              <span class="text-[10px] text-slate-400 font-mono">Slide CapEx Range: $24,940 - $52,050</span>
+            </div>
+            <div class="h-56 w-full">
+              <canvas id="chart-roi"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TAB 4: NETWORK DEPLOYMENT & SITES -->
+    <div id="view-network" class="hidden space-y-6">
+      <div class="glass-panel rounded-2xl p-5 space-y-4">
+        <h3 class="font-bold text-slate-100 border-b border-slate-800 pb-2">Multi-Shelter Network Calculator</h3>
+        <div class="space-y-2">
+          <div class="flex justify-between text-xs">
+            <span class="text-slate-300">Shelter Rollout Count</span>
+            <span id="val-network-count" class="font-mono text-brand-400">5 Shelters</span>
+          </div>
+          <input type="range" id="slider-network-count" min="1" max="50" value="5" class="w-full h-2 bg-slate-800 rounded-lg">
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="p-3 bg-slate-900 rounded-xl border border-slate-800">
+            <div class="text-xs text-slate-400">Total CapEx Investment</div>
+            <div id="out-network-capex" class="text-lg font-bold font-mono text-white">$167,500 AUD</div>
+          </div>
+          <div class="p-3 bg-slate-900 rounded-xl border border-slate-800">
+            <div class="text-xs text-slate-400">Net Annual Network Revenue</div>
+            <div id="out-network-rev" class="text-lg font-bold font-mono text-emerald-400">$7,500 AUD/yr</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ================= JAVASCRIPT LOGIC ================= -->
+  <script>
+    // --- State Variables ---
+    let energyChart = null;
+    let roiChart = null;
+
+    // Financial & Network defaults
+    let capexVal = 33500;
+    let adrevVal = 2500;
+    let opexVal = 1000;
+    let networkCount = 5;
+
+    // Environmental state defaults
+    let sunVal = 85;
+    let windVal = 18;
+    let passengersVal = 4;
+    let isLedOn = true;
+    let isHeatOn = false;
+    let isCctvOn = true;
+    let isAdOn = true;
+    let isEinkDark = false;
+
+    // Helper to safely bind event listeners
+    function safeAddListener(id, event, handler) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener(event, handler);
+      }
+    }
+
+    // Helper to safely set innerText
+    function setElText(id, text) {
+      const el = document.getElementById(id);
+      if (el) el.innerText = text;
+    }
+
+    // Tab Navigation Switcher
+    function switchTab(tabId) {
+      const tabs = ['dashboard', 'inspector', 'roi', 'network'];
+      tabs.forEach(t => {
+        const viewEl = document.getElementById('view-' + t);
+        const btnEl = document.getElementById('tab-btn-' + t);
+        if (viewEl) {
+          if (t === tabId) {
+            viewEl.classList.remove('hidden');
+          } else {
+            viewEl.classList.add('hidden');
+          }
+        }
+        if (btnEl) {
+          if (t === tabId) {
+            btnEl.className = "px-3 py-1.5 rounded-lg text-white bg-brand-600 transition-all flex items-center gap-1.5 font-medium";
+          } else {
+            btnEl.className = "px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition-all flex items-center gap-1.5 font-medium";
+          }
+        }
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Hardware Component Inspector Selector
+    const componentData = {
+      solar: {
+        id: 'COMP-01', category: 'RENEWABLE GENERATION', name: '1. Rooftop Solar Panel Array', subtitle: '400W Monocrystalline PERC System',
+        power: '400W Max Peak', status: 'Generating ~340W', statusClass: 'text-emerald-400',
+        desc: 'High-efficiency monocrystalline solar panels angled for optimal Sydney sun exposure. Captures between 1.5 to 2.0 kWh per day.',
+        roi: 'Eliminates grid trenching costs ($35,000+ savings per remote stop).',
+        cost: '$400 - $1,200 AUD'
+      },
+      wind: {
+        id: 'COMP-02', category: 'RENEWABLE GENERATION', name: '2. Vertical-Axis Micro-Wind Turbine', subtitle: '80W Low Cut-In Speed Rotor',
+        power: '80W Rated Output', status: 'Spinning ~48W', statusClass: 'text-cyan-400',
+        desc: 'Compact omnidirectional vertical-axis wind turbine capturing street-level gusts from passing traffic.',
+        roi: 'Extends continuous off-grid uptime during consecutive overcast days.',
+        cost: '$3,500 - $9,000 AUD'
+      },
+      led: {
+        id: 'COMP-03', category: 'SAFETY & LIGHTING', name: '3. Under-Roof LED Security Lighting', subtitle: 'Dimmable Dusk-to-Dawn LED Strips',
+        power: '25W Full Brightness', status: 'Active Night Mode', statusClass: 'text-amber-300',
+        desc: 'Energy-efficient LED lighting built under the canopy ceiling to illuminate the shelter and passenger seating.',
+        roi: 'Improves passenger safety and deters vandalism.',
+        cost: '$50 - $150 AUD'
+      },
+      battery: {
+        id: 'COMP-04', category: 'ENERGY STORAGE', name: '4. LiFePO4 Battery Storage Bank', subtitle: '2.6 kWh / 24V Lithium Iron Phosphate',
+        power: '2.6 kWh Capacity', status: '92% State of Charge', statusClass: 'text-emerald-400',
+        desc: 'Safe, long-lifespan (3,000+ cycles) LiFePO4 battery pack encased in a secure weather-proof ground cabinet.',
+        roi: 'High thermal stability and long operational lifespan.',
+        cost: '$1,500 - $4,500 AUD'
+      },
+      controller: {
+        id: 'COMP-05', category: 'POWER MANAGEMENT', name: '5. Charge Controller & Power Mgmt', subtitle: 'Dual MPPT / Low-Voltage Protection',
+        power: '98% Efficiency', status: 'Active Power Optimization', statusClass: 'text-brand-400',
+        desc: 'Microcontroller unit regulating incoming solar and wind energy and protecting battery health.',
+        roi: 'Prevents battery degradation and logs telemetry.',
+        cost: '$200 - $600 AUD'
+      },
+      bench: {
+        id: 'COMP-06', category: 'PASSENGER COMFORT', name: '6. Integrated Low-Voltage Heated Seating', subtitle: 'Thermostatic Passenger Heating',
+        power: '100W Heat Output', status: 'Automated Off-Peak', statusClass: 'text-red-400',
+        desc: 'Low-voltage heating element embedded into the passenger bench to provide warmth during cold winter mornings.',
+        roi: 'Enhances transit rider comfort during severe cold weather conditions.',
+        cost: '$500 - $1,200 AUD'
+      },
+      eink: {
+        id: 'COMP-07', category: 'PASSENGER INFORMATION', name: '7. E-Ink Electronic Info Display', subtitle: 'Non-Ad, Low-Power Arrival Screen',
+        power: '1.8W Draw', status: 'Live GTFS Updating', statusClass: 'text-emerald-300',
+        desc: 'Ultra-low-power electronic ink screen that displays real-time bus arrivals and route timetables.',
+        roi: 'Dramatically reduces continuous display power consumption.',
+        cost: '$1,800 - $3,500 AUD'
+      },
+      cctv: {
+        id: 'COMP-08', category: 'SAFETY & SECURITY', name: '8. Security Cameras (24/7 Monitored)', subtitle: 'Night Vision / HD Surveillance',
+        power: '15W Continuous Draw', status: 'Recording & Monitored', statusClass: 'text-blue-400',
+        desc: 'Wide-angle 1080p security camera providing continuous surveillance to ensure passenger safety.',
+        roi: 'Substantially reduces shelter repair costs caused by vandalism.',
+        cost: '$500 - $1,500 AUD'
+      },
+      ad: {
+        id: 'COMP-09', category: 'COMMERCIAL REVENUE', name: '9. Digital Advertising Display', subtitle: 'High-Brightness Smart Commercial Display',
+        power: '85W Dynamic Draw', status: 'Active Ad Loop', statusClass: 'text-purple-400',
+        desc: 'Commercial display generating revenue by broadcasting localized digital ads.',
+        roi: 'Yields $1,500 - $3,000 AUD/yr in revenue, fully offsetting annual maintenance and amortizing CapEx.',
+        cost: '$2,500 - $5,000 AUD'
+      },
+      usb: {
+        id: 'COMP-10', category: 'COMMUTER AMENITY', name: '10. USB Charging Ports', subtitle: '5V / 2.1A Weatherproof Outlets',
+        power: '5W per Port', status: 'Active Community Service', statusClass: 'text-cyan-300',
+        desc: 'Free public USB charging ports allowing commuters to top up smartphones while waiting.',
+        roi: 'High public amenity value that encourages public transport usage.',
+        cost: 'Included in Shelter Base ($0 Extra CapEx)'
+      }
+    };
+
+    function selectComponent(key) {
+      const item = componentData[key];
+      if (!item) return;
+
+      setElText('spec-category', item.category);
+      setElText('spec-id', item.id);
+      setElText('spec-name', item.name);
+      setElText('spec-subtitle', item.subtitle);
+      setElText('spec-power', item.power);
+      setElText('spec-desc', item.desc);
+      setElText('spec-roi', item.roi);
+      setElText('spec-cost', item.cost);
+
+      const statusEl = document.getElementById('spec-status');
+      if (statusEl) {
+        statusEl.innerText = item.status;
+        statusEl.className = 'text-lg font-bold font-mono mt-0.5 ' + item.statusClass;
+      }
+    }
+
+    // Quick Presets Handler
+    function applyPreset(preset) {
+      if (preset === 'summer') {
+        sunVal = 100; windVal = 12; passengersVal = 4; isLedOn = false; isHeatOn = false;
+      } else if (preset === 'overcast') {
+        sunVal = 25; windVal = 22; passengersVal = 6; isLedOn = true; isHeatOn = false;
+      } else if (preset === 'storm') {
+        sunVal = 10; windVal = 45; passengersVal = 2; isLedOn = true; isHeatOn = true;
+      } else if (preset === 'rush') {
+        sunVal = 70; windVal = 16; passengersVal = 12; isLedOn = true; isHeatOn = false;
+      }
+
+      const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+      setVal('slider-sun', sunVal);
+      setVal('slider-wind', windVal);
+      setVal('slider-passengers', passengersVal);
+
+      setElText('val-sun', sunVal + '%');
+      setElText('val-wind', windVal + ' km/h');
+      setElText('val-passengers', passengersVal + ' Passengers');
+
+      const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
+      setChk('toggle-led', isLedOn);
+      setChk('toggle-heat', isHeatOn);
+
+      updatePhysicsSimulation();
+    }
+
+    function toggleEInkMode() {
+      isEinkDark = !isEinkDark;
+      const el = document.getElementById('eink-container');
+      if (el) {
+        if (isEinkDark) {
+          el.className = "eink-display p-4 rounded-xl space-y-3 transition-colors duration-300 bg-slate-900 text-slate-100 border-slate-700";
+        } else {
+          el.className = "eink-display p-4 rounded-xl space-y-3 transition-colors duration-300 bg-slate-200 text-slate-900 border-slate-400";
+        }
+      }
+    }
+
+    // Physics Update Logic & Wind Dynamic Curves
+    function updatePhysicsSimulation() {
+      const solarW = Math.round((sunVal / 100) * 400);
+      const windW = Math.round((windVal / 50) * 80);
+
+      let totalLoad = 0;
+      if (isLedOn) totalLoad += 25;
+      if (isCctvOn) totalLoad += 15;
+      if (isAdOn) totalLoad += 85;
+      if (isHeatOn) totalLoad += 100;
+      totalLoad += (passengersVal * 5); // USB draw per passenger
+
+      setElText('out-solar', solarW + ' W');
+      setElText('out-wind', windW + ' W');
+      setElText('out-load', totalLoad + ' W');
+      setElText('pct-solar', Math.round((solarW / 400) * 100) + '%');
+      setElText('pct-wind', Math.round((windW / 80) * 100) + '%');
+
+      // Update Power Gauge Progress Bars
+      const setBar = (id, pct) => {
+        const el = document.getElementById(id);
+        if (el) el.style.width = Math.min(100, Math.max(0, pct)) + '%';
+      };
+      setBar('bar-solar', (solarW / 400) * 100);
+      setBar('bar-wind', (windW / 80) * 100);
+      setBar('bar-load', (totalLoad / 400) * 100);
+
+      const netPower = (solarW + windW) - totalLoad;
+      const statusBattery = document.getElementById('status-battery');
+      if (statusBattery) {
+        statusBattery.innerText = (netPower >= 0 ? '+' : '') + netPower + 'W Net';
+        statusBattery.className = netPower >= 0 ? 'text-emerald-400 font-semibold' : 'text-red-400 font-semibold';
+      }
+
+      // Update 24-Hour Generation & Battery Curves dynamically
+      if (energyChart) {
+        const solarCurve = [0, 0, 0, 0, 0, 10, 60, 150, 260, 340, 320, 270, 180, 80, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+          .map(v => Math.round(v * (sunVal / 100)));
+
+        const windFactor = windVal / 18;
+        const windCurve = [35, 38, 42, 40, 36, 32, 30, 28, 35, 45, 48, 52, 55, 50, 48, 45, 42, 40, 44, 46, 42, 40, 38, 36]
+          .map(v => Math.round(Math.min(80, v * windFactor)));
+
+        const batterySoc = [82, 80, 78, 76, 75, 76, 80, 86, 92, 96, 98, 100, 99, 97, 94, 90, 87, 85, 84, 83, 83, 83, 82, 82]
+          .map(v => Math.min(100, Math.round(v * ((solarW + windW + 100) / 450))));
+
+        energyChart.data.datasets[0].data = solarCurve;
+        energyChart.data.datasets[1].data = windCurve;
+        energyChart.data.datasets[2].data = batterySoc;
+        energyChart.update();
+      }
+    }
+
+    // Initialize 24-Hour Energy Chart
+    function initEnergyChart() {
+      const ctx = document.getElementById('chart-energy');
+      if (!ctx) return;
+
+      const labels = ['00:00','01:00','02:00','03:00','04:00','05:00','06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00','23:00'];
+
+      energyChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Solar Array (W)',
+              data: [0, 0, 0, 0, 0, 10, 60, 150, 260, 340, 320, 270, 180, 80, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+              borderColor: '#f59e0b',
+              backgroundColor: 'rgba(245, 158, 11, 0.15)',
+              fill: true,
+              tension: 0.4
+            },
+            {
+              label: 'Wind Turbine (W)',
+              data: [35, 38, 42, 40, 36, 32, 30, 28, 35, 45, 48, 52, 55, 50, 48, 45, 42, 40, 44, 46, 42, 40, 38, 36],
+              borderColor: '#06b6d4',
+              backgroundColor: 'rgba(6, 182, 212, 0.1)',
+              fill: true,
+              tension: 0.4
+            },
+            {
+              label: 'Battery SOC (%)',
+              data: [82, 80, 78, 76, 75, 76, 80, 86, 92, 96, 98, 100, 99, 97, 94, 90, 87, 85, 84, 83, 83, 83, 82, 82],
+              borderColor: '#10b981',
+              borderDash: [5, 5],
+              fill: false,
+              tension: 0.3,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: '#94a3b8', font: { family: 'Inter', size: 11 } } }
+          },
+          scales: {
+            x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e293b' } },
+            y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e293b' }, min: 0, max: 400, title: { display: true, text: 'Power (W)', color: '#64748b' } },
+            y1: { position: 'right', min: 0, max: 100, ticks: { color: '#10b981', callback: v => v + '%' }, grid: { drawOnChartArea: false }, title: { display: true, text: 'Battery SOC (%)', color: '#10b981' } }
+          }
+        }
+      });
+    }
+
+    // Initialize Financial ROI Chart
+    function initRoiChart() {
+      const ctx = document.getElementById('chart-roi');
+      if (!ctx) return;
+
+      roiChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Year 0', 'Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5', 'Year 6', 'Year 7', 'Year 8', 'Year 9', 'Year 10'],
+          datasets: [{
+            label: 'Cumulative Cash Flow ($ AUD)',
+            data: [-34745, -33245, -31745, -30245, -28745, -27245, -25745, -24245, -22745, -21245, -19745],
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            fill: true,
+            tension: 0.2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: '#94a3b8', font: { size: 10 } } }
+          },
+          scales: {
+            x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e293b' } },
+            y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e293b' } }
+          }
+        }
+      });
+    }
+
+    // Granular Budget Recalculation
+    function recalcBudget() {
+      const getVal = (id) => parseInt(document.getElementById(id).value) || 0;
+      
+      const cSolar = getVal('cost-solar');
+      const cWind = getVal('cost-wind');
+      const cLed = getVal('cost-led');
+      const cBatt = getVal('cost-batt');
+      const cCtrl = getVal('cost-ctrl');
+      const cHeat = getVal('cost-heat');
+      const cEink = getVal('cost-eink');
+      const cCam = getVal('cost-cam');
+      const cAd = getVal('cost-ad');
+      const cStruct = getVal('cost-struct');
+
+      // Update text labels
+      setElText('cost-lbl-solar', '$' + cSolar.toLocaleString() + ' AUD');
+      setElText('cost-lbl-wind', '$' + cWind.toLocaleString() + ' AUD');
+      setElText('cost-lbl-led', '$' + cLed.toLocaleString() + ' AUD');
+      setElText('cost-lbl-batt', '$' + cBatt.toLocaleString() + ' AUD');
+      setElText('cost-lbl-ctrl', '$' + cCtrl.toLocaleString() + ' AUD');
+      setElText('cost-lbl-heat', '$' + cHeat.toLocaleString() + ' AUD');
+      setElText('cost-lbl-eink', '$' + cEink.toLocaleString() + ' AUD');
+      setElText('cost-lbl-cam', '$' + cCam.toLocaleString() + ' AUD');
+      setElText('cost-lbl-ad', '$' + cAd.toLocaleString() + ' AUD');
+      setElText('cost-lbl-struct', '$' + cStruct.toLocaleString() + ' AUD');
+
+      capexVal = cSolar + cWind + cLed + cBatt + cCtrl + cHeat + cEink + cCam + cAd + cStruct;
+      setElText('badge-total-capex', 'Total CapEx: $' + capexVal.toLocaleString() + ' AUD');
+
+      updateRoiSimulation();
+      updateNetworkSimulation();
+    }
+
+    function resetBudgetDefaults() {
+      const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+      setVal('cost-solar', 800);
+      setVal('cost-wind', 6250);
+      setVal('cost-led', 100);
+      setVal('cost-batt', 3000);
+      setVal('cost-ctrl', 400);
+      setVal('cost-heat', 850);
+      setVal('cost-eink', 2650);
+      setVal('cost-cam', 1000);
+      setVal('cost-ad', 3750);
+      setVal('cost-struct', 14750);
+      setVal('slider-adrev', 2500);
+      adrevVal = 2500;
+      setElText('val-adrev', '$2,500 AUD/yr');
+      recalcBudget();
+    }
+
+    function updateRoiSimulation() {
+      const netAnnual = adrevVal - opexVal;
+      const paybackYears = netAnnual > 0 ? (capexVal / netAnnual).toFixed(1) : '∞';
+      
+      setElText('out-net-annual', (netAnnual >= 0 ? '+' : '') + '$' + netAnnual.toLocaleString() + ' AUD/yr');
+      setElText('out-payback', paybackYears + ' Years');
+
+      if (roiChart) {
+        const dataPoints = [];
+        for (let y = 0; y <= 10; y++) {
+          dataPoints.push(-capexVal + (netAnnual * y));
+        }
+        roiChart.data.datasets[0].data = dataPoints;
+        roiChart.update();
+      }
+    }
+
+    function updateNetworkSimulation() {
+      const totalCapex = capexVal * networkCount;
+      const netRev = (adrevVal - opexVal) * networkCount;
+
+      setElText('out-network-capex', '$' + totalCapex.toLocaleString() + ' AUD');
+      setElText('out-network-rev', '$' + netRev.toLocaleString() + ' AUD/yr');
+    }
+
+    // Event Listeners Registration
+    function setupEventListeners() {
+      safeAddListener('slider-sun', 'input', (e) => {
+        sunVal = parseInt(e.target.value);
+        setElText('val-sun', sunVal + '%');
+        updatePhysicsSimulation();
+      });
+
+      safeAddListener('slider-wind', 'input', (e) => {
+        windVal = parseInt(e.target.value);
+        setElText('val-wind', windVal + ' km/h');
+        updatePhysicsSimulation();
+      });
+
+      safeAddListener('slider-passengers', 'input', (e) => {
+        passengersVal = parseInt(e.target.value);
+        setElText('val-passengers', passengersVal + ' Passengers');
+        updatePhysicsSimulation();
+      });
+
+      safeAddListener('toggle-led', 'change', (e) => { isLedOn = e.target.checked; updatePhysicsSimulation(); });
+      safeAddListener('toggle-heat', 'change', (e) => { isHeatOn = e.target.checked; updatePhysicsSimulation(); });
+      safeAddListener('toggle-cctv', 'change', (e) => { isCctvOn = e.target.checked; updatePhysicsSimulation(); });
+      safeAddListener('toggle-ad', 'change', (e) => { isAdOn = e.target.checked; updatePhysicsSimulation(); });
+
+      safeAddListener('slider-capex', 'input', (e) => {
+        capexVal = parseInt(e.target.value);
+        setElText('val-capex', '$' + capexVal.toLocaleString() + ' AUD');
+        updateRoiSimulation();
+        updateNetworkSimulation();
+      });
+
+      safeAddListener('slider-adrev', 'input', (e) => {
+        adrevVal = parseInt(e.target.value);
+        setElText('val-adrev', '$' + adrevVal.toLocaleString() + ' AUD/yr');
+        updateRoiSimulation();
+        updateNetworkSimulation();
+      });
+
+      safeAddListener('slider-network-count', 'input', (e) => {
+        networkCount = parseInt(e.target.value);
+        setElText('val-network-count', networkCount + ' Shelters');
+        updateNetworkSimulation();
+      });
+    }
+
+    // Reset controls
+    function resetEnvironment() {
+      sunVal = 85;
+      windVal = 18;
+      passengersVal = 4;
+      
+      const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val;
+      };
+      setVal('slider-sun', 85);
+      setVal('slider-wind', 18);
+      setVal('slider-passengers', 4);
+
+      setElText('val-sun', '85%');
+      setElText('val-wind', '18 km/h');
+      setElText('val-passengers', '4 Passengers');
+
+      updatePhysicsSimulation();
+    }
+
+    // Bus Timetable Countdown & Live Clock Loop
+    let busMin504 = 4;
+    let busMin808 = 11;
+    let busMin817 = 22;
+
+    setInterval(() => {
+      busMin504 = busMin504 > 1 ? busMin504 - 1 : 12;
+      busMin808 = busMin808 > 1 ? busMin808 - 1 : 15;
+      busMin817 = busMin817 > 1 ? busMin817 - 1 : 25;
+
+      setElText('eta-504', busMin504 + ' mins');
+      setElText('eta-808', busMin808 + ' mins');
+      setElText('eta-817', busMin817 + ' mins');
+
+      const now = new Date();
+      const clock = document.getElementById('live-clock');
+      const einkTime = document.getElementById('eink-time');
+      if (clock) clock.innerText = now.toLocaleTimeString();
+      if (einkTime) einkTime.innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }, 5000);
+
+    // Initial load
+    window.onload = function() {
+      setupEventListeners();
+      initEnergyChart();
+      initRoiChart();
+      selectComponent('solar');
+      updatePhysicsSimulation();
+      recalcBudget();
+      updateNetworkSimulation();
+    };
+  </script>
+</body>
+</html>
